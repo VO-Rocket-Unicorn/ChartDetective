@@ -1,40 +1,40 @@
 interface Rectangle {
-    x : number;
-    y : number;
-    width : number;
-    height : number;
+    x: number;
+    y: number;
+    width: number;
+    height: number;
 }
 
 interface Point {
-    x : number;
-    y : number;
+    x: number;
+    y: number;
 }
 
 export default class ShapeCommand {
-    path : any[];
-    isFilled : boolean;
-    lineWidth : number;
-    lineCap : string;
-    lineJoin : string;
-    miterLimit : number;
-    lineDash : number[];
-    font : string;
-    textAlign : string;
-    textBaseline : string;
-    direction : string;
-    fillStyle : string;
-    strokeStyle : string;
-    transform : any;
-    globalAlpha : number;
-    globalCompositeOperation : string;
-    bbox : any;
-    clipPaths : any[][];
+    path: any[]; // Array of drawing commands (moveTo, lineTo, curveTo)
+    isFilled: boolean;
+    lineWidth: number;
+    lineCap: string;  // How line ends are drawn ("butt", "round", "square")
+    lineJoin: string; // How line segments connect ("miter", "round", "bevel")
+    miterLimit: number;
+    lineDash: number[]; // Pattern for dashed lines
+    font: string;
+    textAlign: string;
+    textBaseline: string;
+    direction: string;
+    fillStyle: string;
+    strokeStyle: string;
+    transform: any;
+    globalAlpha: number;
+    globalCompositeOperation: string;
+    bbox: any;
+    clipPaths: any[][];
 
-    text : string;
-    textX : number;
-    textY : number;
+    text: string;
+    textX: number;
+    textY: number;
 
-    unicode : any;
+    unicode: any;
 
     constructor() {
         this.path = [];
@@ -44,7 +44,7 @@ export default class ShapeCommand {
         this.lineJoin = "miter";
         this.miterLimit = 10;
         this.lineDash = [];
-        
+
         this.font = '10px sans-serif';
         this.textAlign = 'start';
         this.textBaseline = 'alphabetic';
@@ -57,7 +57,7 @@ export default class ShapeCommand {
         this.globalAlpha = 1.0;
         this.globalCompositeOperation = 'source-over';
 
-        this.bbox = {x:0, y:0, width:0, height:0};
+        this.bbox = { x: 0, y: 0, width: 0, height: 0 };
         this.clipPaths = null;
     }
 
@@ -68,20 +68,20 @@ export default class ShapeCommand {
         LINETO: 3,
         CURVETO: 4
     };
-    
+
     /**
      * Apply the current transform used by this shape to a coordinate
      * @param {Number} x 
      * @param {Number} y 
      */
-    transformPos(x : number, y : number, transform = this.transform) : any {
+    transformPos(x: number, y: number, transform = this.transform): any {
         var point = new DOMPoint(x, y);
         var transformedPt = point.matrixTransform(transform);
 
-        return {x: transformedPt.x, y: transformedPt.y};
+        return { x: transformedPt.x, y: transformedPt.y };
     }
 
-    get rect() : any {
+    get rect(): any {
         return this.bbox;
     }
 
@@ -89,33 +89,33 @@ export default class ShapeCommand {
      * Test if the ShapeCommand is fully contained within a specified rectangle
      * @param {Rectangle} rect
      */
-    isContained(rect : Rectangle) : boolean {
+    isContained(rect: Rectangle): boolean {
         return rect.x < this.rect.x && rect.y < this.rect.y &&
-        rect.x + rect.width > this.rect.x + this.rect.width &&
-        rect.y + rect.height > this.rect.y + this.rect.height;
+            rect.x + rect.width > this.rect.x + this.rect.width &&
+            rect.y + rect.height > this.rect.y + this.rect.height;
     }
 
-    pointsToRect(topLeft : Point, botRight : Point) : any {
+    pointsToRect(topLeft: Point, botRight: Point): any {
         return {
-            x: Math.min(topLeft.x, botRight.x), 
-            y: Math.min(topLeft.y, botRight.y), 
-            width: Math.abs(botRight.x-topLeft.x), 
-            height: Math.abs(botRight.y-topLeft.y)
+            x: Math.min(topLeft.x, botRight.x),
+            y: Math.min(topLeft.y, botRight.y),
+            width: Math.abs(botRight.x - topLeft.x),
+            height: Math.abs(botRight.y - topLeft.y)
         };
     }
 
-    computeBBox(ctx : CanvasRenderingContext2D) : void {
+    computeBBox(ctx: CanvasRenderingContext2D): void {
         if (this.text !== undefined) {
             // We make sure the ctx has the right style to properly measure the text width
             var prevFont = ctx.font;
             ctx.font = this.font;
-            
-            var metrics = ctx.measureText(this.text);
-            var pos = this.transformPos(this.textX-metrics.actualBoundingBoxLeft,
-                this.textY-metrics.actualBoundingBoxAscent);
 
-            var posEnd = this.transformPos(this.textX+metrics.actualBoundingBoxRight,
-                this.textY+metrics.actualBoundingBoxDescent);
+            var metrics = ctx.measureText(this.text);
+            var pos = this.transformPos(this.textX - metrics.actualBoundingBoxLeft,
+                this.textY - metrics.actualBoundingBoxAscent);
+
+            var posEnd = this.transformPos(this.textX + metrics.actualBoundingBoxRight,
+                this.textY + metrics.actualBoundingBoxDescent);
 
             this.bbox = this.pointsToRect(pos, posEnd);
 
@@ -124,9 +124,9 @@ export default class ShapeCommand {
         } else {
             var pathRect = this.pathToRect(this.path);
             var thickness = 0;//this.isFilled? 0 : this.lineWidth/2;
-            var topLeft = this.transformPos(pathRect.left-thickness, pathRect.top-thickness);
-            var botRight = this.transformPos(pathRect.right+thickness, pathRect.bottom+thickness);
-    
+            var topLeft = this.transformPos(pathRect.left - thickness, pathRect.top - thickness);
+            var botRight = this.transformPos(pathRect.right + thickness, pathRect.bottom + thickness);
+
             this.bbox = this.pointsToRect(topLeft, botRight);
         }
 
@@ -142,18 +142,18 @@ export default class ShapeCommand {
                     var transformedRect = this.pointsToRect(topLeft, botRight);
 
                     // Intersect with previous clipping rect if there is one
-                    var leftX   = Math.max( transformedRect.x, this.bbox.x );
-                    var rightX  = Math.min( transformedRect.x+transformedRect.width, this.bbox.x+this.bbox.width );
-                    var topY    = Math.max( transformedRect.y, this.bbox.y );
-                    var bottomY = Math.min( transformedRect.y+transformedRect.height, this.bbox.y+this.bbox.height);
-                    this.bbox = {x: leftX, y: topY, width: rightX-leftX, height: bottomY-topY };
+                    var leftX = Math.max(transformedRect.x, this.bbox.x);
+                    var rightX = Math.min(transformedRect.x + transformedRect.width, this.bbox.x + this.bbox.width);
+                    var topY = Math.max(transformedRect.y, this.bbox.y);
+                    var bottomY = Math.min(transformedRect.y + transformedRect.height, this.bbox.y + this.bbox.height);
+                    this.bbox = { x: leftX, y: topY, width: rightX - leftX, height: bottomY - topY };
                 }
             }
         }
     }
 
     pathToRect(path) {
-        var lastPt = {x: 0, y: 0};
+        var lastPt = { x: 0, y: 0 };
         var minX = Number.MAX_SAFE_INTEGER
         var minY = Number.MAX_SAFE_INTEGER;
         var maxX = Number.MIN_SAFE_INTEGER;
@@ -163,13 +163,13 @@ export default class ShapeCommand {
             var type = path[i][0];
             var args = path[i][1];
             if (type === ShapeCommand.types.MOVETO) {
-                lastPt = {x: args[0], y: args[1]};
+                lastPt = { x: args[0], y: args[1] };
             } else if (type === ShapeCommand.types.LINETO) {
                 minX = Math.min(lastPt.x, args[0], minX);
                 minY = Math.min(lastPt.y, args[1], minY);
                 maxX = Math.max(lastPt.x, args[0], maxX);
                 maxY = Math.max(lastPt.y, args[1], maxY);
-                lastPt = {x: args[0], y: args[1]};
+                lastPt = { x: args[0], y: args[1] };
             } else if (type === ShapeCommand.types.CURVETO) {
                 //TODO: Better approximation
                 // The bbox could be much larger depending on the curve
@@ -178,14 +178,14 @@ export default class ShapeCommand {
                 minY = Math.min(lastPt.y, args[5], minY);
                 maxX = Math.max(lastPt.x, args[4], maxX);
                 maxY = Math.max(lastPt.y, args[5], maxY);
-                lastPt = {x: args[4], y: args[5]};
+                lastPt = { x: args[4], y: args[5] };
             }
         }
 
-        return {left: minX, x: minX, top: minY, y: minY, width: maxX-minX, height: maxY-minY, right: maxX, bottom: maxY};
+        return { left: minX, x: minX, top: minY, y: minY, width: maxX - minX, height: maxY - minY, right: maxX, bottom: maxY };
     }
 
-    addCmd(type : number, args=[]) : void {
+    addCmd(type: number, args = []): void {
         this.path.push([type, args]);
     }
 
@@ -194,7 +194,7 @@ export default class ShapeCommand {
      * @param {Object} a Receiver: Object that receive the style of b
      * @param {Object} b Giver: Object that gets its style copied
      */
-    static copyStyle(a : any, b : any) : void {
+    static copyStyle(a: any, b: any): void {
         a.lineWidth = b.lineWidth;
         a.lineCap = b.lineCap;
         a.lineJoin = b.lineJoin;
@@ -207,7 +207,7 @@ export default class ShapeCommand {
         } else {
             a.lineDash = lineDash;
         }
-        
+
         a.font = b.font;
         a.textAlign = b.textAlign;
         a.textBaseline = b.textBaseline;
@@ -215,7 +215,7 @@ export default class ShapeCommand {
 
         a.fillStyle = b.fillStyle;
         a.strokeStyle = b.strokeStyle;
-        
+
         a.globalAlpha = b.globalAlpha;
         a.globalCompositeOperation = b.globalCompositeOperation;
 
@@ -223,13 +223,13 @@ export default class ShapeCommand {
     }
 
 
-    saveStyle(ctx : any) : void {
+    saveStyle(ctx: any): void {
         ShapeCommand.copyStyle(this, ctx);
 
         this.transform = DOMMatrix.fromMatrix(ctx.getTransform());
     }
 
-    applyStyle(ctx : any) : void {
+    applyStyle(ctx: any): void {
         ShapeCommand.copyStyle(ctx, this);
 
         const currentTransform = DOMMatrix.fromMatrix(ctx.getTransform());
@@ -241,11 +241,11 @@ export default class ShapeCommand {
                     const transform = (clipPath as any).transform;
 
                     ctx.setTransform(currentTransform.a, currentTransform.b,
-                        currentTransform.c, currentTransform.d, 
+                        currentTransform.c, currentTransform.d,
                         currentTransform.e, currentTransform.f);
 
                     ctx.transform(transform.a, transform.b,
-                        transform.c, transform.d, 
+                        transform.c, transform.d,
                         transform.e, transform.f);
 
                     this.applyPath(path, ctx);
@@ -255,19 +255,19 @@ export default class ShapeCommand {
         }
 
         ctx.setTransform(currentTransform.a, currentTransform.b,
-            currentTransform.c, currentTransform.d, 
+            currentTransform.c, currentTransform.d,
             currentTransform.e, currentTransform.f);
 
         ctx.transform(this.transform.a, this.transform.b,
-            this.transform.c, this.transform.d, 
+            this.transform.c, this.transform.d,
             this.transform.e, this.transform.f);
     }
 
-    getTransform() : DOMMatrix {
+    getTransform(): DOMMatrix {
         return this.transform;
     }
 
-    clone() : ShapeCommand {
+    clone(): ShapeCommand {
         var clone = new ShapeCommand();
         clone.saveStyle(this);
         clone.path = clone.path.concat(this.path);
@@ -281,7 +281,7 @@ export default class ShapeCommand {
         clone.textY = this.textY;
         clone.unicode = this.unicode;
 
-        clone.bbox = {x: this.bbox.x, y: this.bbox.y, width: this.bbox.width, height: this.bbox.height};
+        clone.bbox = { x: this.bbox.x, y: this.bbox.y, width: this.bbox.width, height: this.bbox.height };
 
         return clone;
     }
@@ -305,7 +305,7 @@ export default class ShapeCommand {
         }
     }
 
-    draw(ctx : CanvasRenderingContext2D) : void {
+    draw(ctx: CanvasRenderingContext2D): void {
         ctx.save();
         this.applyStyle(ctx);
 
@@ -315,7 +315,7 @@ export default class ShapeCommand {
             } else {
                 ctx.strokeText(this.text, this.textX, this.textY);
             }
-            
+
         } else {
             this.applyPath(this.path, ctx);
 
