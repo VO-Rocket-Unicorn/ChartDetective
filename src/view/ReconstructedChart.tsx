@@ -1,19 +1,18 @@
 import React from 'react';
 import { ChartElementType } from '../datastructure/chartelements/ChartElement';
-import {ChartExtractorState} from './ChartExtractor';
-
+import { ChartExtractorState } from './ChartExtractor';
 import Plot from 'react-plotly.js';
 import AxisCoordinate2D from '../datastructure/AxisCoordinate2D';
 import SubChartElement from '../datastructure/chartelements/SubChartElement';
-
+import { LineChart, Line } from 'recharts';
 interface ReconstructedChartProps {
-    state : ChartExtractorState;
-    setState : any;
+    state: ChartExtractorState;
+    setState: any;
 }
 
 interface CoordArray {
-    x : number[],
-    y : number[]
+    x: number[],
+    y: number[]
 }
 
 export default class ReconstructedChart extends React.Component<ReconstructedChartProps, any> {
@@ -25,7 +24,7 @@ export default class ReconstructedChart extends React.Component<ReconstructedCha
         super(props)
     }
 
-    axisCoordToArray(coord : AxisCoordinate2D[]) : CoordArray {
+    axisCoordToArray(coord: AxisCoordinate2D[]): CoordArray { // Converts an array of AxisCoordinate2D objects to separate X and Y arrays.
         const x = [];
         const y = [];
 
@@ -34,10 +33,10 @@ export default class ReconstructedChart extends React.Component<ReconstructedCha
             y.push(pt.y.value);
         }
 
-        return {x: x, y: y};
+        return { x: x, y: y };
     }
 
-    render() : JSX.Element {
+    render(): JSX.Element {
 
         // Get all the series and put them in plotly's data format
         const traces = [];
@@ -109,7 +108,7 @@ export default class ReconstructedChart extends React.Component<ReconstructedCha
                     if (serie.linkedElements[2] !== null) trace['q1'] = this.axisCoordToArray(serie.linkedElements[2].data).y;
                     if (serie.linkedElements[3] !== null) trace['q3'] = this.axisCoordToArray(serie.linkedElements[3].data).y;
                 }
-                
+
                 traces.push(trace);
                 styleCounter[styleHash] += 1;
             }
@@ -118,10 +117,10 @@ export default class ReconstructedChart extends React.Component<ReconstructedCha
 
         return (
             <Plot
-                style={{width: "100%", height: "100%"}}
+                style={{ width: "100%", height: "100%" }}
                 useResizeHandler={true}
                 data={traces}
-                layout={ {
+                layout={{
                     autosize: true,
                     title: this.props.state.dataTable.name,
                     xaxis: {
@@ -133,7 +132,7 @@ export default class ReconstructedChart extends React.Component<ReconstructedCha
                         title: this.props.state.dataTable.axisY.name
                     },
                     boxmode: 'group' // Needed to support boxplot with the x position. Should not impact other types of charts.
-                } }
+                }}
             />
         );
     }

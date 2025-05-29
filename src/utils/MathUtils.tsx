@@ -11,18 +11,18 @@ export default class MathUtils {
      * @param maxB 
      * @returns Projected value
      */
-    static project(value : number, minA : number, maxA : number, minB : number, maxB : number) : number {
-        return ((value-minA)/(maxA-minA)*(maxB-minB))+minB;
+    static project(value: number, minA: number, maxA: number, minB: number, maxB: number): number { // Convert pixel positions to data values using axis calibration
+        return ((value - minA) / (maxA - minA) * (maxB - minB)) + minB;
     }
 
-    static interpolate(points : AxisCoordinate2D[], pixelPosX : number) : AxisCoordinate2D {
+    static interpolate(points: AxisCoordinate2D[], pixelPosX: number): AxisCoordinate2D {
         if (points.length === 0) {
             return null;
         }
 
         // First, find the two values immediately before and after the value to interpolate
         var prevPt = points[0];
-        var nextPt = points[points.length-1];
+        var nextPt = points[points.length - 1];
 
         // This assumes the points are not sorted, otherhwise could be optimized
         for (var i = 0; i < points.length; ++i) {
@@ -52,10 +52,10 @@ export default class MathUtils {
         }
 
         var coeff = Math.abs(nextPt.x.pixel - pixelPosX) / range;
-        var pixelPosY = (prevPt.y.pixel * (coeff) + nextPt.y.pixel * (1-coeff));
+        var pixelPosY = (prevPt.y.pixel * (coeff) + nextPt.y.pixel * (1 - coeff));
 
         return new AxisCoordinate2D(
-            new AxisCoordinate1D(pixelPosX, prevPt.x.axis), 
+            new AxisCoordinate1D(pixelPosX, prevPt.x.axis),
             new AxisCoordinate1D(pixelPosY, prevPt.y.axis)
         );
     }
@@ -67,9 +67,9 @@ export default class MathUtils {
      * @param bx 
      * @param by 
      */
-    static dist(ax, ay, bx, by) : number {
+    static dist(ax, ay, bx, by): number {
         const dx = bx - ax;
-        const dy = by = ay;
-        return Math.sqrt(dx*dx + dy*dy);
+        const dy = by - ay;
+        return Math.sqrt(dx * dx + dy * dy);
     }
 }
