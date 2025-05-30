@@ -1,3 +1,4 @@
+import os
 import numpy as np
 from scipy import interpolate, optimize
 from typing import List, Tuple, Union, Optional, Dict, Any
@@ -5,12 +6,12 @@ import ast
 import inspect
 from dataclasses import dataclass
 from enum import Enum
-import sympy as sp
+
 from sklearn.metrics import r2_score, mean_squared_error
 import warnings
 
 
-class FunctionType(Enum):
+class FunctionType(Enum):  # Fixed missing parenthesis
     """Supported function generation methods."""
     POLYNOMIAL = "polynomial"
     FOURIER = "fourier"
@@ -68,7 +69,7 @@ class FunctionCodeGenerator:
         docstring: bool = True,
         optimize_for: str = "accuracy",  # "accuracy", "simplicity", "speed"
         constraints: Optional[Dict[str, Any]] = None
-    ) -> GeneratedFunction:
+    ) -> str:
         """
         Generate a Python function from data points.
         
@@ -102,21 +103,24 @@ class FunctionCodeGenerator:
         
         # Generate function based on type
         if function_type == FunctionType.POLYNOMIAL:
-            return self._generate_polynomial_function(x, y, function_name, docstring, optimize_for)
+            result = self._generate_polynomial_function(x, y, function_name, docstring, optimize_for)
         elif function_type == FunctionType.FOURIER:
-            return self._generate_fourier_function(x, y, function_name, docstring)
+            result = self._generate_fourier_function(x, y, function_name, docstring)
         elif function_type == FunctionType.PIECEWISE:
-            return self._generate_piecewise_function(x, y, function_name, docstring)
+            result = self._generate_piecewise_function(x, y, function_name, docstring)
         elif function_type == FunctionType.NEURAL_NETWORK:
-            return self._generate_neural_network_function(x, y, function_name, docstring)
+            result = self._generate_neural_network_function(x, y, function_name, docstring)
         elif function_type == FunctionType.SYMBOLIC_REGRESSION:
-            return self._generate_symbolic_regression_function(x, y, function_name, docstring)
+            result = self._generate_symbolic_regression_function(x, y, function_name, docstring)
         elif function_type == FunctionType.SPLINE:
-            return self._generate_spline_function(x, y, function_name, docstring)
+            result = self._generate_spline_function(x, y, function_name, docstring)
         elif function_type == FunctionType.RATIONAL:
-            return self._generate_rational_function(x, y, function_name, docstring)
+            result = self._generate_rational_function(x, y, function_name, docstring)
         else:
-            return self._generate_parametric_function(x, y, function_type, function_name, docstring)
+            result = self._generate_parametric_function(x, y, function_type, function_name, docstring)
+
+        # Return only the mathematical expression as f(x)
+        return result.expression
     
     def _detect_best_function_type(
         self,
@@ -275,6 +279,17 @@ class FunctionCodeGenerator:
         n_terms = min(20, len(x) // 2)
         coeffs = self._compute_fourier_coefficients(x, y, n_terms, period)
         
+        # Create mathematical expression
+        expr_terms = [f"{coeffs['a0']:.6f}"]
+        
+        for n, (a_n, b_n) in enumerate(zip(coeffs["a"][1:], coeffs["b"][1:]), 1):
+            if abs(a_n) > 1e-10:
+                expr_terms.append(f"{a_n:.6f}*cos({2*np.pi*n:.6f}*x/{period:.6f})")
+            if abs(b_n) > 1e-10:
+                expr_terms.append(f"{b_n:.6f}*sin({2*np.pi*n:.6f}*x/{period:.6f})")
+        
+        expr = " + ".join(expr_terms)
+        
         # Generate code
         code_lines = [
             f"def {function_name}(x):"
@@ -343,7 +358,7 @@ class FunctionCodeGenerator:
         return GeneratedFunction(
             source_code=source_code,
             compiled_function=compiled_func,
-            expression=f"Fourier series with {n_terms} terms",
+            expression=expr,  # Now using the mathematical expression
             parameters=coeffs,
             metrics=metrics,
             domain=(x.min(), x.max()),
@@ -1068,8 +1083,8 @@ class FunctionCodeGenerator:
         # Shift x to [0, period]
         x_shifted = x - x.min()
         
-        # Compute coefficients
-        a0 = 2 * np.trapz(y, x_shifted) / period
+        # Compute coefficients using trapezoid instead of trapz
+        a0 = 2 * np.trapezoid(y, x_shifted) / period
         
         a_coeffs = [a0 / 2]
         b_coeffs = [0]
@@ -1078,8 +1093,8 @@ class FunctionCodeGenerator:
             cos_term = y * np.cos(2 * np.pi * n * x_shifted / period)
             sin_term = y * np.sin(2 * np.pi * n * x_shifted / period)
             
-            a_n = 2 * np.trapz(cos_term, x_shifted) / period
-            b_n = 2 * np.trapz(sin_term, x_shifted) / period
+            a_n = 2 * np.trapezoid(cos_term, x_shifted) / period
+            b_n = 2 * np.trapezoid(sin_term, x_shifted) / period
             
             a_coeffs.append(a_n)
             b_coeffs.append(b_n)
@@ -1264,19 +1279,15 @@ def generate_optimal_function(x_data, y_data):
     generator = FunctionCodeGenerator(optimization_level=2)
     
     # Auto-detect best function type
-    result = generator.generate_function(
+    expr = generator.generate_function(
         x_data, y_data,
         function_name="optimal_fit",
         optimize_for="accuracy"
     )
     
-    print(f"Generated function type: {result.expression}")
-    print(f"R² score: {result.metrics['r2_score']:.4f}")
-    print(f"Function complexity: {result.complexity}")
-    print("\nGenerated code:")
-    print(result.source_code)
+    print(f"Generated function: f(x) = {expr}")
     
-    return result
+    return expr
 
 
 def generate_fast_approximation(x_data, y_data):
@@ -1312,47 +1323,91 @@ def generate_constrained_function(x_data, y_data):
 
 
 if __name__ == "__main__":
-    # Example usage
+    import pandas as pd
     import matplotlib.pyplot as plt
     
-    # Generate sample data
-    np.random.seed(42)
-    x = np.linspace(0, 10, 50)
-    y = 3 * np.sin(0.5 * x) * np.exp(-0.1 * x) + np.random.normal(0, 0.1, 50)
-    
-    # Generate optimal function
-    result = generate_optimal_function(x, y)
-    
-    # Test the generated function
-    x_test = np.linspace(-1, 11, 200)
-    y_test = result.compiled_function(x_test)
-    
-    # Plot results
-    plt.figure(figsize=(12, 5))
-    
-    plt.subplot(1, 2, 1)
-    plt.scatter(x, y, alpha=0.6, label='Data points')
-    plt.plot(x_test, y_test, 'r-', label='Generated function')
-    plt.xlabel('x')
-    plt.ylabel('y')
-    plt.title(f'Function Fit (R² = {result.metrics["r2_score"]:.4f})')
-    plt.legend()
-    plt.grid(True, alpha=0.3)
-    
-    plt.subplot(1, 2, 2)
-    plt.text(0.1, 0.9, "Generated Function Code:", transform=plt.gca().transAxes, 
-             fontsize=12, fontweight='bold')
-    plt.text(0.1, 0.1, result.source_code[:500] + "...", transform=plt.gca().transAxes,
-             fontsize=8, fontfamily='monospace', wrap=True)
-    plt.axis('off')
-    
-    plt.tight_layout()
-    plt.show()
-    
-    # Save function to file
-    with open('generated_function.py', 'w') as f:
-        f.write(result.source_code)
-    
-    print(f"\nFunction saved to 'generated_function.py'")
-    print(f"Expression: {result.expression}")
-    print(f"Complexity: {result.complexity}")
+    try:
+        # Load and prepare data
+        csv_path = 'src/marker_points.csv'
+        
+        # Read CSV file
+        try:
+            marker_df = pd.read_csv(csv_path)
+            if 'x' not in marker_df.columns or 'y' not in marker_df.columns:
+                marker_df = pd.read_csv(csv_path, header=None, names=['x', 'y'])
+            marker_df = marker_df.iloc[:, 0:2]
+            marker_df.columns = ['x', 'y']
+        except Exception as e:
+            print(f"Error reading CSV: {str(e)}")
+            raise
+        
+        # Convert to numeric and clean data
+        marker_df = marker_df.apply(pd.to_numeric, errors='coerce')
+        marker_df = marker_df.dropna()
+        
+        if len(marker_df) == 0:
+            raise ValueError("No valid numeric data points found in the CSV file")
+        
+        # Extract and sort points
+        x = marker_df['x'].values
+        y = marker_df['y'].values
+        sort_idx = np.argsort(x)
+        x = x[sort_idx]
+        y = y[sort_idx]
+        
+
+        # First, just plot the points
+        plt.figure(figsize=(8, 6))
+        plt.scatter(x, y, color='blue', label='Data points', alpha=0.6)
+        plt.xlabel('x')
+        plt.ylabel('y')
+        plt.title('Original Data Points')
+        plt.grid(True, alpha=0.3)
+        plt.legend()
+        plt.show()
+        
+        # Wait for user confirmation
+        input("\nPress Enter to fit and plot the curve...")
+        
+        # Now fit the function and create the second plot
+        generator = FunctionCodeGenerator(optimization_level=2)
+        expr = generator.generate_function(
+            x, y,
+            function_type=FunctionType.POLYNOMIAL,
+            function_name="marker_fit",
+            optimize_for="accuracy"
+        )
+        
+        print("\nFitted polynomial function:")
+        print(f"f(x) = {expr}")
+        
+        # Create evaluation function
+        def f(x):
+            return eval(expr.replace("^", "**"))
+        
+        # Generate smooth curve points
+        x_smooth = np.linspace(min(x), max(x), 200)
+        y_smooth = np.array([f(float(xi)) for xi in x_smooth])
+        
+        # Plot points with fitted curve
+        plt.figure(figsize=(8, 6))
+        plt.scatter(x, y, color='blue', label='Data points', alpha=0.6)
+        plt.plot(x_smooth, y_smooth, 'r-', label='Fitted curve')
+        plt.xlabel('x')
+        plt.ylabel('y')
+        plt.title('Points with Fitted Curve')
+        plt.legend()
+        plt.grid(True, alpha=0.3)
+        plt.show()
+        
+        # Save the function to a file
+        with open('fitted_function.txt', 'w') as f:
+            f.write(f"f(x) = {expr}")
+        
+    except FileNotFoundError:
+        print(f"Error: CSV file not found at src/marker_points.csv")
+        print("Current working directory:", os.getcwd())
+    except ValueError as e:
+        print(f"Data error: {str(e)}")
+    except Exception as e:
+        print(f"Unexpected error: {str(e)}")
