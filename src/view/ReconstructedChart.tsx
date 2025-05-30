@@ -380,7 +380,7 @@ export default class ReconstructedChart extends React.Component<ReconstructedCha
                         backgroundColor: "#ffffff",        // White background
                         padding: "8px 12px",              // Internal padding
                         borderRadius: "5px",              // Rounded corners
-                        border: "2px solid #007bff",      // Blue border
+                        border: "2px solid #ffc52e",      // Blue border
                         minWidth: "220px"                 // Minimum width
                     }}>
                         <div style={{ fontWeight: "bold", fontSize: "12px", color: "#666", marginBottom: "4px" }}>
@@ -420,7 +420,7 @@ export default class ReconstructedChart extends React.Component<ReconstructedCha
                         onClick={this.resetTracing}                // Handle reset click
                         style={{
                             padding: "5px 10px",                   // Button padding
-                            backgroundColor: "#007bff",            // Blue background
+                            backgroundColor: "#ffc52e",            // Blue background
                             color: "white",                         // White text
                             border: "none",                         // No border
                             borderRadius: "3px",                   // Rounded corners
