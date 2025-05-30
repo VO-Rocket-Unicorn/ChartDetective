@@ -295,7 +295,7 @@ export default class ReconstructedChart extends React.Component<ReconstructedCha
                     const tracedTrace = {
                         x: tracedCoords.x,                          // Traced X coordinates
                         y: tracedCoords.y,                          // Traced Y coordinates
-                        name: `${serie.name} (Traced)`,            // Name with traced indicator
+                        name: `${serie.name}<br>(Traced)`,            // Name with traced indicator
                         type: "scatter",                            // Scatter type
                         mode: "lines",                              // Lines mode
                         line: {
@@ -438,7 +438,7 @@ export default class ReconstructedChart extends React.Component<ReconstructedCha
                         style={{
                             padding: "5px 10px",                   // Button padding
                             backgroundColor: "#ffc52e",            // Blue background
-                            color: "white",                         // White text
+                            color: '#181818',                         // White text
                             border: "none",                         // No border
                             borderRadius: "3px",                   // Rounded corners
                             cursor: "pointer"                       // Pointer cursor
@@ -459,11 +459,11 @@ export default class ReconstructedChart extends React.Component<ReconstructedCha
                             title: this.props.state.dataTable.name,    // Chart title
                             xaxis: {
                                 type: this.props.state.dataTable.axisX.isCategorical() ? "category" : "linear", // X-axis type
-                                title: this.props.state.dataTable.axisX.name                                    // X-axis title
+                                title: this.props.state.dataTable.axisX.name
                             },
                             yaxis: {
                                 type: this.props.state.dataTable.axisY.isCategorical() ? "category" : "linear", // Y-axis type
-                                title: this.props.state.dataTable.axisY.name                                    // Y-axis title
+                                title: this.props.state.dataTable.axisY.name  // Y-axis title
                             },
                             boxmode: 'group'                            // Group box plots
                         }}
