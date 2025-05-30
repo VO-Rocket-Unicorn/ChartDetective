@@ -68,57 +68,74 @@ export default class ReconstructedChart extends React.Component<ReconstructedCha
 
     // Calculate current coordinate with smooth interpolation between data points
     getCurrentCoordinate(coords: CoordArray, progress: number): { x: number | null, y: number | null } {
-        // Return null coordinates if no progress or no data
         if (progress === 0 || coords.x.length === 0) {
             return { x: null, y: null };
         }
 
-        const totalPoints = coords.x.length;                           // Total number of data points
-        const exactPosition = (progress / 100) * (totalPoints - 1);   // Convert percentage to exact position
-        const index = Math.floor(exactPosition);                      // Get the integer part (which segment)
-        const fraction = exactPosition - index;                       // Get the decimal part (how far in segment)
+        // Use sorted coordinates for tracing
+        const tracingCoords = this.getTracingCoordinates(coords);
 
-        // If at or beyond the last point, return the last point
+        const totalPoints = tracingCoords.x.length;
+        const exactPosition = (progress / 100) * (totalPoints - 1);
+        const index = Math.floor(exactPosition);
+        const fraction = exactPosition - index;
+
         if (index >= totalPoints - 1) {
             return {
-                x: coords.x[totalPoints - 1],
-                y: coords.y[totalPoints - 1]
+                x: tracingCoords.x[totalPoints - 1],
+                y: tracingCoords.y[totalPoints - 1]
             };
         }
 
-        // Linear interpolation between current point and next point
-        const x_interp = coords.x[index] + fraction * (coords.x[index + 1] - coords.x[index]);
-        const y_interp = coords.y[index] + fraction * (coords.y[index + 1] - coords.y[index]);
+        // Interpolate using sorted tracing data
+        const x_interp = tracingCoords.x[index] + fraction * (tracingCoords.x[index + 1] - tracingCoords.x[index]);
+        const y_interp = tracingCoords.y[index] + fraction * (tracingCoords.y[index + 1] - tracingCoords.y[index]);
 
-        return { x: x_interp, y: y_interp }; // Return interpolated coordinates
+        return { x: x_interp, y: y_interp };
     }
+    // Create sorted coordinates specifically for tracing - SEPARATE FROM ORIGINAL DATA
+    getTracingCoordinates(coords: CoordArray): CoordArray {
+        if (coords.x.length === 0) {
+            return { x: [], y: [] };
+        }
 
+        // Create array of indices and sort by X values
+        const indices = Array.from({ length: coords.x.length }, (_, i) => i);
+        indices.sort((a, b) => coords.x[a] - coords.x[b]);
+
+        const sortedX = indices.map(i => coords.x[i]);
+        const sortedY = indices.map(i => coords.y[i]);
+
+        return { x: sortedX, y: sortedY };
+    }
     // Create the traced portion of the curve with interpolated endpoint
     createTracedCurve(coords: CoordArray, progress: number) {
-        // Return empty arrays if no progress or no data
         if (progress === 0 || coords.x.length === 0) {
             return { x: [], y: [] };
         }
 
-        const totalPoints = coords.x.length;                           // Total number of data points
-        const exactPosition = (progress / 100) * (totalPoints - 1);   // Convert percentage to exact position
-        const index = Math.floor(exactPosition);                      // Get the integer part
-        const fraction = exactPosition - index;                       // Get the decimal part
+        // Use sorted coordinates for tracing
+        const tracingCoords = this.getTracingCoordinates(coords);
 
-        // Get all complete points up to the current index
-        const tracedX = coords.x.slice(0, index + 1);
-        const tracedY = coords.y.slice(0, index + 1);
+        const totalPoints = tracingCoords.x.length;
+        const exactPosition = (progress / 100) * (totalPoints - 1);
+        const index = Math.floor(exactPosition);
+        const fraction = exactPosition - index;
+
+        // Get all complete points up to the current index from sorted data
+        const tracedX = tracingCoords.x.slice(0, index + 1);
+        const tracedY = tracingCoords.y.slice(0, index + 1);
 
         // Add interpolated point if we're between two points
         if (fraction > 0 && index < totalPoints - 1) {
-            const x_interp = coords.x[index] + fraction * (coords.x[index + 1] - coords.x[index]);
-            const y_interp = coords.y[index] + fraction * (coords.y[index + 1] - coords.y[index]);
+            const x_interp = tracingCoords.x[index] + fraction * (tracingCoords.x[index + 1] - tracingCoords.x[index]);
+            const y_interp = tracingCoords.y[index] + fraction * (tracingCoords.y[index + 1] - tracingCoords.y[index]);
 
-            tracedX.push(x_interp); // Add interpolated X coordinate
-            tracedY.push(y_interp); // Add interpolated Y coordinate
+            tracedX.push(x_interp);
+            tracedY.push(y_interp);
         }
 
-        return { x: tracedX, y: tracedY }; // Return traced coordinate arrays
+        return { x: tracedX, y: tracedY };
     }
 
     // Handle dropdown selection change - reset tracing when switching curves
