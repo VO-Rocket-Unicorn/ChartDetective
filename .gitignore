@@ -1,2 +1,6 @@
+<<<<<<< HEAD
 /frontend/node_modules
 /backend/venv
+=======
+/node_modules
+>>>>>>> 44baca510e9a8447add812858866ae04a7f1a10c
