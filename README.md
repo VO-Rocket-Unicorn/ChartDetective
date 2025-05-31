@@ -32,14 +32,38 @@ git remote -v
 ```
 git pull upstream main
 ```
-**6.** Install node modules
+**6.** Install Dependencies
+
+Frontend
 ```
+cd frontend
 npm Install
 ```
-
-**7.** Run the project
+Backend
 ```
+cd backend
+
+# Create virtual environment
+python -m venv venv
+
+# Activate virtual environment
+# Windows:
+venv\Scripts\activate
+# macOS/Linux:
+source venv/bin/activate
+pip install -r requirements.txt
+
+```
+**7.** Run the project
+
+Frontend
+```
+cd frontend
 npm start
+```
+Backend 
+```
+uvicorn curve_api:app --reload
 ```
 
 **8.**  MAKE NECESSARY CHANGES IN THE PROJECT TO EDIT IT
