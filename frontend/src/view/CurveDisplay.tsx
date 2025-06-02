@@ -47,7 +47,7 @@ const CurveDisplay: React.FC<CurveDisplayProps> = ({ state }) => {
     const [autoGenerate, setAutoGenerate] = useState(true);
     const [fittingMethod, setFittingMethod] = useState<string>('linear');
     const [useTracedData, setUseTracedData] = useState(false);
-
+    const [curveEvaluations, setCurveEvaluations] = useState<Map<number, { x: string, y: string, error: string }>>(new Map());
     // Convert AxisCoordinate2D to simple arrays like ReconstructedChart
     const axisCoordToArray = (coord: AxisCoordinate2D[]): { x: number[], y: number[] } => {
         const x = [];
@@ -185,7 +185,33 @@ const CurveDisplay: React.FC<CurveDisplayProps> = ({ state }) => {
 
         return curves;
     };
+    const evaluateIndividualCurve = async (seriesIndex: number, xValue: string) => {
+        const x_new = parseFloat(xValue);
+        if (isNaN(x_new)) {
+            setCurveEvaluations(prev => new Map(prev).set(seriesIndex, { x: xValue, y: '', error: 'Invalid number' }));
+            return;
+        }
 
+        try {
+            const response = await axios.post('http://localhost:8000/evaluate-curve', {
+                seriesIndex: seriesIndex,
+                x_value: x_new
+            });
+
+            setCurveEvaluations(prev => new Map(prev).set(seriesIndex, {
+                x: xValue,
+                y: response.data.y_value.toFixed(6),
+                error: response.data.warning || ''
+            }));
+
+        } catch (err: any) {
+            setCurveEvaluations(prev => new Map(prev).set(seriesIndex, {
+                x: xValue,
+                y: '',
+                error: err.response?.data?.detail || 'Evaluation failed'
+            }));
+        }
+    };
     const generateCurveFunction = async (curveData: CurveData) => {
         try {
             setLoading(prev => new Set(prev).add(curveData.seriesIndex));
@@ -323,7 +349,7 @@ const CurveDisplay: React.FC<CurveDisplayProps> = ({ state }) => {
                             style={{
                                 marginBottom: '20px',
                                 padding: '15px',
-                                border: selectedCurve === curve.seriesIndex ? '2px solid #007bff' : '1px solid #ddd',
+                                border: selectedCurve === curve.seriesIndex ? '2px solid #ffc52e' : '1px solid #ddd',
                                 borderRadius: '8px',
                                 backgroundColor: selectedCurve === curve.seriesIndex ? '#f8f9ff' : '#fff',
                                 cursor: 'pointer'
@@ -358,7 +384,7 @@ const CurveDisplay: React.FC<CurveDisplayProps> = ({ state }) => {
                                         <span style={{ color: '#ffc107', marginRight: '10px' }}>⏳ Generating...</span>
                                     )}
                                     {result && (
-                                        <span style={{ color: '#28a745', marginRight: '10px' }}>
+                                        <span style={{ color: '#ffc52e', marginRight: '10px' }}>
                                             ✓ {result.fitting_method.replace('_', ' ')} (R²: {result.r_squared.toFixed(4)})
                                         </span>
                                     )}
@@ -371,8 +397,8 @@ const CurveDisplay: React.FC<CurveDisplayProps> = ({ state }) => {
                                         disabled={isLoading}
                                         style={{
                                             padding: '5px 10px',
-                                            backgroundColor: isLoading ? '#ccc' : '#007bff',
-                                            color: 'white',
+                                            backgroundColor: isLoading ? '#ccc' : '#ffc52e',
+                                            color: '#181818',
                                             border: 'none',
                                             borderRadius: '3px',
                                             cursor: isLoading ? 'not-allowed' : 'pointer',
@@ -413,8 +439,8 @@ const CurveDisplay: React.FC<CurveDisplayProps> = ({ state }) => {
                                                 }}
                                                 style={{
                                                     padding: '4px 8px',
-                                                    backgroundColor: '#28a745',
-                                                    color: 'white',
+                                                    backgroundColor: '#ffc52e',
+                                                    color: '#181818',
                                                     border: 'none',
                                                     borderRadius: '3px',
                                                     cursor: 'pointer',
@@ -457,6 +483,90 @@ const CurveDisplay: React.FC<CurveDisplayProps> = ({ state }) => {
                                             {result.python_function.split('\n').slice(0, 15).join('\n')}
                                             {result.python_function.split('\n').length > 15 && '\n... (truncated)'}
                                         </pre>
+                                    </div>
+                                    <div style={{
+                                        backgroundColor: '#e2e8f0',
+                                        padding: '15px',
+                                        borderRadius: '8px',
+                                    }}>
+
+
+                                        <div style={{ color: '#a0aec0', marginBottom: '10px', fontSize: '13px' }}>
+                                            {`Use the interpolator for ${curve.label}:`}
+                                        </div>
+
+                                        <div style={{
+                                            fontFamily: 'monospace',
+                                            backgroundColor: '#e2e8f0',
+                                            color: '#1a202c',
+                                            padding: '12px',
+                                            borderRadius: '6px',
+                                            marginBottom: '15px'
+                                        }}>
+                                            <div style={{ marginBottom: '8px' }}>
+                                                X Value = <input
+                                                    type="number"
+                                                    value={curveEvaluations.get(curve.seriesIndex)?.x || ''}
+                                                    onChange={(e) => {
+                                                        const newValue = e.target.value;
+                                                        setCurveEvaluations(prev => new Map(prev).set(curve.seriesIndex, {
+                                                            x: newValue,
+                                                            y: prev.get(curve.seriesIndex)?.y || '',
+                                                            error: ''
+                                                        }));
+                                                    }}
+                                                    placeholder="2.5"
+                                                    style={{
+                                                        width: '80px',
+                                                        backgroundColor: '#e2e8f0',
+                                                        color: '#1a202c',
+                                                        border: '1px solid #718096',
+                                                        padding: '4px 8px',
+                                                        borderRadius: '4px',
+                                                        fontFamily: 'monospace'
+                                                    }}
+                                                    onKeyPress={(e) => {
+                                                        if (e.key === 'Enter') {
+                                                            evaluateIndividualCurve(curve.seriesIndex, curveEvaluations.get(curve.seriesIndex)?.x || '');
+                                                        }
+                                                    }}
+                                                />
+                                            </div>
+                                            <div>
+                                                Y Value = <span style={{ color: '#181818' }}>
+                                                    {curveEvaluations.get(curve.seriesIndex)?.y || '?'}
+                                                </span>
+                                            </div>
+                                        </div>
+
+                                        <button
+                                            onClick={() => evaluateIndividualCurve(curve.seriesIndex, curveEvaluations.get(curve.seriesIndex)?.x || '')}
+                                            disabled={!curveEvaluations.get(curve.seriesIndex)?.x}
+                                            style={{
+                                                padding: '6px 12px',
+                                                backgroundColor: '#ffc52e',
+                                                color: '#1a202c',
+                                                border: 'none',
+                                                borderRadius: '4px',
+                                                cursor: curveEvaluations.get(curve.seriesIndex)?.x ? 'pointer' : 'not-allowed',
+                                                fontFamily: 'monospace',
+                                                fontSize: '13px',
+                                                fontWeight: 'bold'
+                                            }}
+                                        >
+                                            Execute
+                                        </button>
+
+                                        {curveEvaluations.get(curve.seriesIndex)?.error && (
+                                            <div style={{
+                                                color: '#fc8181',
+                                                fontSize: '13px',
+                                                marginTop: '8px',
+                                                fontFamily: 'monospace'
+                                            }}>
+                                                Error: {curveEvaluations.get(curve.seriesIndex)?.error}
+                                            </div>
+                                        )}
                                     </div>
                                 </div>
                             )}

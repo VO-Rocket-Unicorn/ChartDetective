@@ -6,8 +6,9 @@ import matplotlib.pyplot as plt
 from scipy.interpolate import CubicSpline, UnivariateSpline, BarycentricInterpolator, interp1d
 import io
 import base64
-from typing import List, Optional, Tuple
+from typing import List, Optional, Tuple, Dict, Any
 import matplotlib
+from sympy import false
 matplotlib.use('Agg')
 
 app = FastAPI()
@@ -29,6 +30,8 @@ class AxisInfo(BaseModel):
     y_name: str
     x_range: Tuple[float, float]
     y_range: Tuple[float, float]
+# ADDED: Global storage for interpolators - exactly like scipy tutorial
+stored_interpolators: Dict[int, Any] = {}
 
 class SingleCurveRequest(BaseModel):
     points: List[Point]
@@ -49,7 +52,18 @@ class CurveResponse(BaseModel):
     axis_info: AxisInfo
     fitting_method: str
     r_squared: float
-    point_count: int
+    point_count: int# ADDED: New evaluation request/response models
+class EvaluationRequest(BaseModel):
+    seriesIndex: int
+    x_value: float
+
+class EvaluationResponse(BaseModel):
+    y_value: float
+    is_within_bounds: bool
+    x_min: float
+    x_max: float
+    is_extrapolation: bool
+    warning: Optional[str] = None
 
 def fit_linear_interpolation(x_data, y_data):
     """
@@ -64,7 +78,7 @@ def fit_linear_interpolation(x_data, y_data):
     # linear_interp = interp1d(x_sorted, y_sorted, kind='linear', 
     #                         bounds_error=False, fill_value='extrapolate')
     linear_interp = interp1d(x_sorted, y_sorted, kind='linear', 
-                            bounds_error=True) # # bounds_error=True to raise error if out of range of x_data
+                            bounds_error=False, fill_value=np.nan) # # bounds_error=True to raise error if out of range of x_data
     
     equation = f"Piecewise Linear Interpolation through {len(x_data)} points"
     
@@ -464,7 +478,14 @@ async def fit_single_curve(request: SingleCurveRequest):
             fitted_func, coefficients, equation, degree = fit_standard_polynomial(x_data, y_data)
         else:
             fitted_func, coefficients, equation, degree = fit_linear_interpolation(x_data, y_data)
-        
+            # ADDED: Store the interpolator for later evaluation - key addition!
+
+        stored_interpolators[request.seriesIndex] = {   
+        'interpolator': fitted_func,  # This is the 'f' from scipy tutorial
+        'x_range': [min(x_data), max(x_data)],
+        'method': fitting_method
+        }
+
         # Calculate R-squared
         y_pred = fitted_func(np.array(x_data))
         r_squared = calculate_r_squared(np.array(y_data), y_pred)
@@ -497,6 +518,57 @@ async def fit_single_curve(request: SingleCurveRequest):
         
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Curve fitting failed: {str(e)}")
+# ADDED: New evaluation endpoint - exactly like scipy tutorial
+@app.post("/evaluate-curve", response_model=EvaluationResponse)
+async def evaluate_curve(request: EvaluationRequest):
+    """Evaluate interpolator exactly like scipy tutorial: y_new = f(x_new)"""
+    try:
+        # Check if interpolator exists
+        if request.seriesIndex not in stored_interpolators:
+            raise HTTPException(
+                status_code=404, 
+                detail=f"Values not found for the series {request.seriesIndex}. Please fit the curve first."
+            )
+        
+        stored_data = stored_interpolators[request.seriesIndex]
+        f = stored_data['interpolator']  # This is our 'f' from the tutorial
+        x_range = stored_data['x_range']
+        
+        # Single line evaluation exactly like the tutorial: y_new = f(x_new)
+        x_new = request.x_value
+        y_new = float(f(x_new))
+        
+        # Check if result is NaN (scipy returns NaN for out-of-bounds)
+        warning = None
+        if np.isnan(y_new):
+            warning = f"X value {x_new:.3f} is outside the range [{x_range[0]:.3f}, {x_range[1]:.3f}]"
+            y_new = 0.0  # or handle as needed
+        
+        # Boundary checking
+        is_within_bounds = x_range[0] <= x_new <= x_range[1]
+        
+        return EvaluationResponse(
+            y_value=y_new,
+            is_within_bounds=is_within_bounds,
+            x_min=x_range[0],
+            x_max=x_range[1],
+            is_extrapolation=not is_within_bounds,
+            warning=warning
+        )
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Evaluation failed: {str(e)}")
+    
+@app.get("/debug/interpolators")
+async def debug_interpolators():
+    """Debug endpoint to check stored interpolators"""
+    return {
+        "stored_series": list(stored_interpolators.keys()),
+        "count": len(stored_interpolators),
+        "message": "These are the interpolators available for evaluation"
+    }
 
 @app.get("/")
 async def root():
