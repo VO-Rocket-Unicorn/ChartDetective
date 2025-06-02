@@ -585,7 +585,7 @@ const CurveDisplay: React.FC<CurveDisplayProps> = ({ state }) => {
                     padding: '20px'
                 }}>
                     <h4>No Curves Extracted</h4>
-                    <p>Extract data series from the chart to automatically generate curve functions.</p>
+                    <p>Extract data series from the chart to generate curve functions.</p>
                 </div>
             )}
         </div>

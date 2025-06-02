@@ -190,7 +190,7 @@ def generate_plot_for_curve(x_data, y_data, fitted_func, equation, color, label,
         # Plot sample of original data points (if too many, subsample for visibility)
         if len(x_data) > 50:
             # Subsample for visualization
-            step = len(x_data) // 25
+            step = len(x_data) // 50
             x_plot = x_data[::step]
             y_plot = y_data[::step]
             plt.scatter(x_plot, y_plot, color='red', s=50, zorder=5, 

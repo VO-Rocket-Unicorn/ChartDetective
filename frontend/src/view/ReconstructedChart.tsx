@@ -365,7 +365,7 @@ export default class ReconstructedChart extends React.Component<ReconstructedCha
                         >
                             {/* Create option for each traceable series */}
                             {traceableSeries.map((serie, index) => (
-                                <option key={index} value={this.props.state.dataTable.series.indexOf(serie)}>
+                                <option style={{ backgroundColor: serie.mainColor, color: "red" }} key={index} value={this.props.state.dataTable.series.indexOf(serie)}>
                                     {serie.name || `Series ${index + 1}`}  {/* Use series name or default */}
                                 </option>
                             ))}
@@ -385,7 +385,7 @@ export default class ReconstructedChart extends React.Component<ReconstructedCha
                             step="0.5"                                  // Step size for precision
                             value={this.state.tracingProgress}         // Controlled by state
                             onChange={this.handleProgressChange}       // Handle slider changes
-                            style={{ flex: 1 }}                       // Take remaining space
+                            style={{ flex: 1, color: "#666" }}                       // Take remaining space
                         />
                         <span style={{ minWidth: "50px", fontWeight: "bold" }}>
                             {this.state.tracingProgress.toFixed(1)}%   {/* Display current percentage */}
