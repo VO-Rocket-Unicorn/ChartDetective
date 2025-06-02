@@ -484,15 +484,16 @@ const CurveDisplay: React.FC<CurveDisplayProps> = ({ state }) => {
                                             {result.python_function.split('\n').length > 15 && '\n... (truncated)'}
                                         </pre>
                                     </div>
+                                    {/* evaluation of x value */}
                                     <div style={{
-                                        backgroundColor: '#e2e8f0',
+                                        backgroundColor: '#f8f9fa',
                                         padding: '15px',
                                         borderRadius: '8px',
                                     }}>
 
 
-                                        <div style={{ color: '#a0aec0', marginBottom: '10px', fontSize: '13px' }}>
-                                            {`Use the interpolator for ${curve.label}:`}
+                                        <div style={{ color: '#181818', marginBottom: '10px', fontSize: '13px' }}>
+                                            {`Get the values for ${curve.label}:`}
                                         </div>
 
                                         <div style={{
@@ -515,7 +516,7 @@ const CurveDisplay: React.FC<CurveDisplayProps> = ({ state }) => {
                                                             error: ''
                                                         }));
                                                     }}
-                                                    placeholder="2.5"
+                                                    placeholder="0.000"
                                                     style={{
                                                         width: '80px',
                                                         backgroundColor: '#e2e8f0',
@@ -534,7 +535,7 @@ const CurveDisplay: React.FC<CurveDisplayProps> = ({ state }) => {
                                             </div>
                                             <div>
                                                 Y Value = <span style={{ color: '#181818' }}>
-                                                    {curveEvaluations.get(curve.seriesIndex)?.y || '?'}
+                                                    {curveEvaluations.get(curve.seriesIndex)?.y || 'Not Found'}
                                                 </span>
                                             </div>
                                         </div>

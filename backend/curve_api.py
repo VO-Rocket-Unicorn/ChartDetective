@@ -481,7 +481,7 @@ async def fit_single_curve(request: SingleCurveRequest):
             # ADDED: Store the interpolator for later evaluation - key addition!
 
         stored_interpolators[request.seriesIndex] = {   
-        'interpolator': fitted_func,  # This is the 'f' from scipy tutorial
+        'interpolator': fitted_func,  # This is the 'f' 
         'x_range': [min(x_data), max(x_data)],
         'method': fitting_method
         }
@@ -529,17 +529,18 @@ async def evaluate_curve(request: EvaluationRequest):
                 status_code=404, 
                 detail=f"Values not found for the series {request.seriesIndex}. Please fit the curve first."
             )
-        
         stored_data = stored_interpolators[request.seriesIndex]
-        f = stored_data['interpolator']  # This is our 'f' from the tutorial
+        f = stored_data['interpolator']  # This is our 'f'
         x_range = stored_data['x_range']
-        
-        # Single line evaluation exactly like the tutorial: y_new = f(x_new)
+
+        # Single line evaluation
         x_new = request.x_value
         y_new = float(f(x_new))
         
-        # Check if result is NaN (scipy returns NaN for out-of-bounds)
+        # Initialize warning to None
         warning = None
+
+        # Check if result is NaN or outside the range
         if np.isnan(y_new):
             warning = f"X value {x_new:.3f} is outside the range [{x_range[0]:.3f}, {x_range[1]:.3f}]"
             y_new = 0.0  # or handle as needed
